@@ -21,6 +21,7 @@ from .jax_backend import JaxBackend
 from .tensorflow_backend import TensorFlowBackend
 from .pytorch_backend import PyTorchBackend
 from .cupy_backend import CuPyBackend
+from .jittor_backend import JittorBackend
 
 bk = Any  # tnbackend
 
@@ -30,9 +31,11 @@ _BACKENDS = {
     "tensorflow": TensorFlowBackend,
     "pytorch": PyTorchBackend,  # no intention to fully maintain this one
     "cupy": CuPyBackend,  # no intention to fully maintain this one
+    "jittor": JittorBackend,
 }
 
 tn.backends.backend_factory._BACKENDS["cupy"] = CuPyBackend
+tn.backends.backend_factory._BACKENDS["jittor"] = JittorBackend
 
 _INSTANTIATED_BACKENDS: Dict[str, bk] = dict()
 

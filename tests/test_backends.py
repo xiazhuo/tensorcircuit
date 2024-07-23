@@ -17,7 +17,7 @@ modulepath = os.path.dirname(os.path.dirname(thisfile))
 sys.path.insert(0, modulepath)
 import tensorcircuit as tc
 
-dtype = np.complex64
+dtype = np.float32
 
 
 def universal_vmap():
@@ -63,7 +63,7 @@ def test_grad_torch(torchb):
     np.testing.assert_allclose(f(a), np.ones([2]), atol=1e-5)
 
 
-@pytest.mark.parametrize("backend", [lf("npb"), lf("tfb"), lf("jaxb")])
+@pytest.mark.parametrize("backend", [lf("jtb")])
 def test_backend_scatter(backend):
     np.testing.assert_allclose(
         tc.backend.scatter(
@@ -96,7 +96,7 @@ def test_backend_scatter(backend):
     )
 
 
-@pytest.mark.parametrize("backend", [lf("npb"), lf("tfb"), lf("jaxb")])
+@pytest.mark.parametrize("backend", [lf("npb"), lf("tfb"), lf("jaxb"), lf("jtb")])
 def test_backend_methods(backend):
     # TODO(@refraction-ray): add more methods
     np.testing.assert_allclose(
@@ -179,7 +179,7 @@ def test_backend_methods(backend):
     np.testing.assert_allclose(r, 10 * np.ones([2]), atol=1e-5)
 
 
-@pytest.mark.parametrize("backend", [lf("npb"), lf("tfb"), lf("jaxb"), lf("torchb")])
+@pytest.mark.parametrize("backend", [lf("npb"), lf("tfb"), lf("jaxb"), lf("torchb"),lf("jtb")])
 def test_backend_methods_2(backend):
     np.testing.assert_allclose(tc.backend.mean(tc.backend.ones([10])), 1.0, atol=1e-5)
     # acos acosh asin asinh atan atan2 atanh cosh (cos) tan tanh sinh (sin)
@@ -342,7 +342,7 @@ def test_dlpack(backend):
     np.testing.assert_allclose(a, a1, atol=1e-5)
 
 
-@pytest.mark.parametrize("backend", [lf("npb"), lf("tfb"), lf("jaxb"), lf("torchb")])
+@pytest.mark.parametrize("backend", [lf("jtb")])
 def test_arg_cmp(backend):
     np.testing.assert_allclose(tc.backend.argmax(tc.backend.ones([3], "float64")), 0)
     np.testing.assert_allclose(
@@ -359,7 +359,7 @@ def test_arg_cmp(backend):
     )
 
 
-@pytest.mark.parametrize("backend", [lf("npb"), lf("tfb"), lf("jaxb"), lf("torchb")])
+@pytest.mark.parametrize("backend", [lf("npb"), lf("tfb"), lf("jaxb"), lf("jtb"),lf("torchb")])
 def test_tree_map(backend):
     def f(a, b):
         return a + b
@@ -743,16 +743,16 @@ def test_qr(backend, highp):
         np.testing.assert_allclose(n_grad, a_grad, atol=1e-3)
 
 
-@pytest.mark.parametrize("backend", [lf("npb"), lf("tfb"), lf("jaxb")])
+@pytest.mark.parametrize("backend", [lf("jtb")])
 def test_sparse_methods(backend):
     values = tc.backend.convert_to_tensor(np.array([1.0, 2.0]))
-    values = tc.backend.cast(values, "complex64")
+    values = tc.backend.cast(values, "int64")
     indices = tc.backend.convert_to_tensor(np.array([[0, 0], [1, 1]]))
     indices = tc.backend.cast(indices, "int64")
     spa = tc.backend.coo_sparse_matrix(indices, values, shape=[4, 4])
     vec = tc.backend.ones([4, 1])
     da = np.array(
-        [[1, 0, 0, 0], [0, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]], dtype=np.complex64
+        [[1, 0, 0, 0], [0, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]], dtype=np.int64
     )
     assert tc.backend.is_sparse(spa) is True
     assert tc.backend.is_sparse(vec) is False
@@ -763,7 +763,7 @@ def test_sparse_methods(backend):
     )
     np.testing.assert_allclose(
         tc.backend.sparse_dense_matmul(spa, vec),
-        np.array([[1], [2], [0], [0]], dtype=np.complex64),
+        np.array([[1], [2], [0], [0]], dtype=np.int64),
         atol=1e-5,
     )
     spa_np = tc.backend.numpy(spa)
@@ -879,7 +879,7 @@ def test_grad_has_aux(backend):
     np.testing.assert_allclose(gs(tc.backend.ones([]))[0], 2.0, atol=1e-5)
 
 
-@pytest.mark.parametrize("backend", [lf("npb"), lf("jaxb"), lf("tfb")])
+@pytest.mark.parametrize("backend", [lf("npb"),lf("tfb"),lf("jtb")])
 def test_solve(backend):
     A = np.array([[2, 1, 0], [1, 2, 0], [0, 0, 1]], dtype=np.float32)
     A = tc.backend.convert_to_tensor(A)
@@ -891,7 +891,7 @@ def test_solve(backend):
     np.testing.assert_allclose(xp, x[:, 0], atol=1e-5)
 
 
-@pytest.mark.parametrize("backend", [lf("npb"), lf("tfb"), lf("jaxb"), lf("torchb")])
+@pytest.mark.parametrize("backend", [lf("npb"), lf("tfb"), lf("jaxb"), lf("torchb"),lf("jtb")])
 def test_treeutils(backend):
     d0 = {"a": np.ones([2]), "b": [tc.backend.zeros([]), tc.backend.ones([1, 1])]}
     leaves, treedef = tc.backend.tree_flatten(d0)
@@ -1032,3 +1032,200 @@ def test_nested_vmap(backend):
     np.testing.assert_allclose(ya, tc.backend.transpose(yb, [1, 0, 2]), atol=1e-5)
     np.testing.assert_allclose(ya, yajit, atol=1e-5)
     np.testing.assert_allclose(yajit, tc.backend.transpose(ybjit, [1, 0, 2]), atol=1e-5)
+
+
+
+@pytest.mark.parametrize("backend", [lf("jtb")])
+def test_jittor_real(backend):
+    np.testing.assert_allclose(
+        tc.backend.softmax(tc.array_to_tensor(np.ones([3, 2]), dtype="float32")),
+        np.ones([3, 2]) / 6.0,
+        atol=1e-4,
+    )
+
+    arr = tc.backend.zeros([5], dtype="float32")
+    np.testing.assert_allclose(
+        tc.backend.sigmoid(arr),
+        tc.backend.ones([5]) * 0.5,
+        atol=1e-4,
+    )
+
+    np.testing.assert_allclose(
+        tc.backend.sum(tc.array_to_tensor(np.arange(4),dtype="float32")), 6, atol=1e-4
+    )
+
+    a = tc.array_to_tensor(np.array([1, 1, 3, 2, 2, 1]), dtype="int32")
+    np.testing.assert_allclose(tc.backend.unique_with_counts(a)[0].shape[0], 3)
+
+    np.testing.assert_allclose(
+        tc.backend.cumsum(tc.array_to_tensor(np.array([[0.2, 0.2], [0.2, 0.4]]),dtype='float32')),
+        np.array([0.2, 0.4, 0.6, 1.0]),
+        atol=1e-4,
+    )
+
+    np.testing.assert_allclose(
+        tc.backend.max(tc.backend.ones([2, 2], "float32"),1), 1.0, atol=1e-4
+    )
+    np.testing.assert_allclose(
+        tc.backend.min(
+            tc.backend.cast(
+                tc.backend.convert_to_tensor(np.array([[1.0, 2.0], [2.0, 3.0]])),
+                "float64",
+            ),
+            axis=1,
+        ),
+        np.array([1.0, 2.0]),
+        atol=1e-4,
+    )  # by default no keepdim
+
+    np.testing.assert_allclose(
+        tc.backend.concat([tc.backend.ones([2, 2]), tc.backend.ones([1, 2])]),
+        tc.backend.ones([3, 2]),
+        atol=1e-5,
+    )
+
+    np.testing.assert_allclose(
+        tc.backend.gather1d(
+            tc.array_to_tensor(np.array([0, 1, 2]), dtype='int32'),
+            tc.array_to_tensor(np.array([2, 1, 0]), dtype="int32"),
+        ),
+        np.array([2, 1, 0]),
+        atol=1e-5,
+    )
+
+    def sum_(carry, x):
+        return carry + x
+
+    r = tc.backend.scan(sum_, tc.backend.ones([10, 2]), tc.backend.zeros([2]))
+    np.testing.assert_allclose(r, 10 * np.ones([2]), atol=1e-5)
+
+    np.testing.assert_allclose(tc.backend.mean(tc.backend.ones([10])), 1.0, atol=1e-5)
+    # acos acosh asin asinh atan atan2 atanh cosh (cos) tan tanh sinh (sin)
+    np.testing.assert_allclose(
+        tc.backend.acos(tc.backend.ones([2], dtype="float32")),
+        np.arccos(tc.backend.ones([2])),
+        atol=1e-5,
+    )
+    np.testing.assert_allclose(
+        tc.backend.acosh(tc.backend.ones([2], dtype="float32")),
+        np.arccosh(tc.backend.ones([2])),
+        atol=1e-5,
+    )
+    np.testing.assert_allclose(
+        tc.backend.asin(tc.backend.ones([2], dtype="float32")),
+        np.arcsin(tc.backend.ones([2])),
+        atol=1e-5,
+    )
+    np.testing.assert_allclose(
+        tc.backend.asinh(tc.backend.ones([2], dtype="float32")),
+        np.arcsinh(tc.backend.ones([2])),
+        atol=1e-5,
+    )
+    np.testing.assert_allclose(
+        tc.backend.atan(0.5 * tc.backend.ones([2], dtype="float32")),
+        np.arctan(0.5 * tc.backend.ones([2])),
+        atol=1e-5,
+    )
+    np.testing.assert_allclose(
+        tc.backend.atan2(
+            tc.backend.ones([1], dtype="float32"), tc.backend.ones([1], dtype="float32")
+        ),
+        np.arctan2(
+            tc.backend.ones([1], dtype="float32"), tc.backend.ones([1], dtype="float32")
+        ),
+        atol=1e-5,
+    )
+    np.testing.assert_allclose(
+        tc.backend.atanh(0.5 * tc.backend.ones([2], dtype="float32")),
+        np.arctanh(0.5 * tc.backend.ones([2])),
+        atol=1e-5,
+    )
+    np.testing.assert_allclose(
+        tc.backend.cosh(tc.backend.ones([2], dtype="float32")),
+        np.cosh(tc.backend.ones([2])),
+        atol=1e-5,
+    )
+    np.testing.assert_allclose(
+        tc.backend.tan(tc.backend.ones([2], dtype="float32")),
+        np.tan(tc.backend.ones([2])),
+        atol=1e-5,
+    )
+    np.testing.assert_allclose(
+        tc.backend.tanh(tc.backend.ones([2], dtype="float32")),
+        np.tanh(tc.backend.ones([2])),
+        atol=1e-5,
+    )
+    np.testing.assert_allclose(
+        tc.backend.sinh(0.5 * tc.backend.ones([2], dtype="float32")),
+        np.sinh(0.5 * tc.backend.ones([2])),
+        atol=1e-5,
+    )
+    np.testing.assert_allclose(
+        tc.backend.eigvalsh(tc.backend.ones([2, 2])), np.array([0, 2]), atol=1e-5
+    )
+    np.testing.assert_allclose(
+        tc.backend.left_shift(
+            tc.backend.convert_to_tensor(np.array([4, 3])),
+            tc.backend.convert_to_tensor(np.array([1, 1])),
+        ),
+        np.array([8, 6]),
+    )
+    np.testing.assert_allclose(
+        tc.backend.right_shift(
+            tc.backend.convert_to_tensor(np.array([4, 3])),
+            tc.backend.convert_to_tensor(np.array([1, 1])),
+        ),
+        np.array([2, 1]),
+    )
+    np.testing.assert_allclose(
+        tc.backend.mod(
+            tc.backend.convert_to_tensor(np.array([4, 3])),
+            tc.backend.convert_to_tensor(np.array([2, 2])),
+        ),
+        np.array([0, 1]),
+    )
+    np.testing.assert_allclose(
+        tc.backend.arange(3),
+        np.array([0, 1, 2]),
+    )
+    np.testing.assert_allclose(
+        tc.backend.arange(1, 5, 2),
+        np.array([1, 3]),
+    )
+    ## skip complex contents, changed by jiyifei
+    # assert tc.backend.dtype(tc.backend.ones([])) == "complex64"
+    edges = [-1, 3.3, 9.1, 10.0]
+    edges = tc.backend.convert_to_tensor(edges)
+    values = tc.backend.convert_to_tensor(np.array([0.0, 4.1, 12.0], dtype=np.float32))
+    r = tc.backend.numpy(tc.backend.searchsorted(edges, values))
+    np.testing.assert_allclose(r, np.array([1, 2, 4]))
+    p = tc.backend.convert_to_tensor(
+        np.array(
+            [0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.2, 0.4], dtype=np.float32
+        )
+    )
+    r = tc.backend.probability_sample(10000, p, status=np.random.uniform(size=[10000]))
+    _, r = np.unique(r, return_counts=True)
+    np.testing.assert_allclose(
+        r - tc.backend.numpy(p) * 10000.0, np.zeros([10]), atol=200, rtol=1
+    )
+    # np.testing.assert_allclose(
+    #     tc.backend.std(tc.backend.cast(tc.backend.arange(1, 4), "float32")),
+    #     0.81649658,
+    #     atol=1e-5,
+    # )
+    arr = np.random.normal(size=(6, 6))
+    np.testing.assert_allclose(
+        tc.backend.relu(tc.array_to_tensor(arr, dtype="float32")),
+        np.maximum(arr, 0),
+        atol=1e-4,
+    )
+    np.testing.assert_allclose(
+        tc.backend.det(tc.backend.convert_to_tensor(np.eye(3) * 2)), 8, atol=1e-5
+    )
+
+    indices = np.array([[1, 2], [0, 1]])
+    ans = np.array([[[0, 1, 0], [0, 0, 1]], [[1, 0, 0], [0, 1, 0]]])
+    np.testing.assert_allclose(tc.backend.one_hot(indices, 3), ans, atol=1e-4)
+
+

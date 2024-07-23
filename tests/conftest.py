@@ -61,6 +61,19 @@ def cpb():
 
 
 @pytest.fixture(scope="function")
+def jtb():
+    try:
+        tc.set_backend("jittor")
+        yield
+        tc.set_backend("numpy")
+    except ImportError as e:
+        print(e)
+        tc.set_backend("numpy")
+        pytest.skip("****** No jittor backend found, skipping test suit *******")
+
+
+
+@pytest.fixture(scope="function")
 def highp():
     tc.set_dtype("complex128")
     yield
